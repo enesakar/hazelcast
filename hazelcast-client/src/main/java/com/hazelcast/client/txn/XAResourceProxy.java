@@ -22,6 +22,7 @@ import com.hazelcast.transaction.TransactionException;
 import com.hazelcast.transaction.impl.SerializableXID;
 import com.hazelcast.transaction.impl.Transaction;
 
+import com.hazelcast.transaction.impl.XAResourceImpl;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
@@ -178,7 +179,11 @@ public class XAResourceProxy implements XAResource {
         }
         if (xaResource instanceof XAResourceProxy) {
             XAResourceProxy other = (XAResourceProxy) xaResource;
-            return transactionManager.equals(other.transactionManager);
+            return transactionManager.getGroupName().equals(other.transactionManager.getGroupName());
+        }
+        if (xaResource instanceof XAResourceImpl){
+            XAResourceImpl other = (XAResourceImpl) xaResource;
+            return transactionManager.getGroupName().equals(other.getGroupName());
         }
         return false;
     }
@@ -195,7 +200,10 @@ public class XAResourceProxy implements XAResource {
 
     @Override
     public synchronized boolean setTransactionTimeout(int seconds) throws XAException {
-        this.transactionTimeoutSeconds = seconds;
+        if (transactionContext.setTransactionTimeout(seconds)) {
+            this.transactionTimeoutSeconds = seconds;
+            return true;
+        }
         return false;
     }
 
